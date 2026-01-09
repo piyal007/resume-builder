@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 const defaultResumeData = {
   name: "MD. PIYAL ISLAM",
@@ -157,7 +159,101 @@ export default function ResumeBuilder() {
   const [resumeData, setResumeData] = useState(defaultResumeData);
   const [styles, setStyles] = useState(defaultStyles);
   const [activeSection, setActiveSection] = useState("personal");
+  const [currentResumeId, setCurrentResumeId] = useState(null);
+  const [resumeTitle, setResumeTitle] = useState("My Resume");
+  const [savedResumes, setSavedResumes] = useState([]);
+  const [saveStatus, setSaveStatus] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const resumeRef = useRef(null);
+
+  // Fetch saved resumes on mount
+  useEffect(() => {
+    fetchResumes();
+  }, []);
+
+  const fetchResumes = async () => {
+    try {
+      const response = await fetch(`${API_URL}/resumes`);
+      const data = await response.json();
+      setSavedResumes(data);
+    } catch (error) {
+      console.error("Failed to fetch resumes:", error);
+    }
+  };
+
+  const saveResume = async () => {
+    setIsLoading(true);
+    setSaveStatus("Saving...");
+    try {
+      const payload = { resumeData, styles, title: resumeTitle };
+
+      if (currentResumeId) {
+        // Update existing resume
+        const response = await fetch(`${API_URL}/resumes/${currentResumeId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        await response.json();
+        setSaveStatus("Updated!");
+      } else {
+        // Create new resume
+        const response = await fetch(`${API_URL}/resumes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        setCurrentResumeId(data._id);
+        setSaveStatus("Saved!");
+      }
+      fetchResumes();
+    } catch (error) {
+      console.error("Failed to save resume:", error);
+      setSaveStatus("Error saving");
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => setSaveStatus(""), 2000);
+    }
+  };
+
+  const loadResume = async (id) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/resumes/${id}`);
+      const data = await response.json();
+      setResumeData(data.resumeData);
+      setStyles(data.styles);
+      setResumeTitle(data.title || "My Resume");
+      setCurrentResumeId(id);
+    } catch (error) {
+      console.error("Failed to load resume:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteResume = async (id) => {
+    if (!confirm("Are you sure you want to delete this resume?")) return;
+    try {
+      await fetch(`${API_URL}/resumes/${id}`, { method: "DELETE" });
+      if (currentResumeId === id) {
+        setCurrentResumeId(null);
+        setResumeData(defaultResumeData);
+        setStyles(defaultStyles);
+      }
+      fetchResumes();
+    } catch (error) {
+      console.error("Failed to delete resume:", error);
+    }
+  };
+
+  const createNewResume = () => {
+    setCurrentResumeId(null);
+    setResumeData(defaultResumeData);
+    setStyles(defaultStyles);
+    setResumeTitle("My Resume");
+  };
 
   const updateField = (field, value) => {
     setResumeData((prev) => ({ ...prev, [field]: value }));
@@ -316,6 +412,63 @@ export default function ResumeBuilder() {
           <div className="max-w-lg mx-auto">
             <h1 className="text-2xl font-bold text-gray-800 mb-4">Resume Builder</h1>
 
+            {/* Save/Load Section */}
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg space-y-2">
+              <div className="flex gap-2">
+                <button
+                  onClick={saveResume}
+                  disabled={isLoading}
+                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition font-medium text-sm disabled:opacity-50"
+                >
+                  {isLoading ? "Saving..." : currentResumeId ? "Update Resume" : "Save Resume"}
+                </button>
+                <button
+                  onClick={createNewResume}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition text-sm"
+                >
+                  New
+                </button>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Resume Title</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Frontend Resume, Backend Resume"
+                  value={resumeTitle}
+                  onChange={(e) => setResumeTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
+              </div>
+              {saveStatus && (
+                <p className={`text-sm ${saveStatus.includes("Error") ? "text-red-600" : "text-green-600"}`}>
+                  {saveStatus}
+                </p>
+              )}
+              {savedResumes.length > 0 && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Load Saved Resume</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {savedResumes.map((resume) => (
+                      <div key={resume._id} className="flex items-center gap-1 bg-white border rounded px-2 py-1">
+                        <button
+                          onClick={() => loadResume(resume._id)}
+                          className="text-xs text-blue-600 hover:text-blue-700"
+                        >
+                          {resume.title || resume.resumeData?.name || "Untitled"}
+                        </button>
+                        <button
+                          onClick={() => deleteResume(resume._id)}
+                          className="text-xs text-red-500 hover:text-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="mb-4 flex gap-2">
               <button
                 onClick={handlePrint}
@@ -324,10 +477,7 @@ export default function ResumeBuilder() {
                 Download PDF / Print
               </button>
               <button
-                onClick={() => {
-                  setResumeData(defaultResumeData);
-                  setStyles(defaultStyles);
-                }}
+                onClick={createNewResume}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition text-sm"
               >
                 Reset
