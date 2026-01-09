@@ -1074,13 +1074,14 @@ export default function ResumeBuilder() {
                     style={{
                       fontSize: `${styles.headerContactFontSize}pt`,
                       color: "#374151",
-                      textAlign: "right",
+                      textAlign: "left",
                     }}
                   >
-                    {resumeData.phone && <div>{resumeData.phone}</div>}
-                    {resumeData.email && <div>{resumeData.email}</div>}
+                    {resumeData.phone && <div><strong>Phone:</strong> {resumeData.phone}</div>}
+                    {resumeData.email && <div><strong>Email:</strong> {resumeData.email}</div>}
                     {resumeData.linkedin && (
                       <div>
+                        <strong>LinkedIn:</strong>{" "}
                         <a href={resumeData.linkedinUrl} style={{ color: styles.linkColor, textDecoration: "underline" }}>
                           {resumeData.linkedin}
                         </a>
@@ -1088,6 +1089,7 @@ export default function ResumeBuilder() {
                     )}
                     {resumeData.github && (
                       <div>
+                        <strong>GitHub:</strong>{" "}
                         <a href={resumeData.githubUrl} style={{ color: styles.linkColor, textDecoration: "underline" }}>
                           {resumeData.github}
                         </a>
@@ -1095,9 +1097,15 @@ export default function ResumeBuilder() {
                     )}
                     {resumeData.portfolio && (
                       <div>
+                        <strong>Portfolio:</strong>{" "}
                         <a href={resumeData.portfolioUrl} style={{ color: styles.linkColor, textDecoration: "underline" }}>
                           {resumeData.portfolio}
                         </a>
+                      </div>
+                    )}
+                    {resumeData.address && (
+                      <div>
+                        <strong>Address:</strong> {resumeData.address}
                       </div>
                     )}
                   </div>
@@ -1200,11 +1208,7 @@ export default function ResumeBuilder() {
             {/* Projects */}
             {styles.showProjects && resumeData.projects.length > 0 && (
               <div style={{
-                marginBottom: "12px",
-                paddingBottom: styles.showSectionBorder && styles.showAddress && resumeData.address ? "10px" : "0",
-                borderBottom: styles.showSectionBorder && styles.showAddress && resumeData.address
-                  ? `${styles.sectionBorderWidth}px ${styles.sectionBorderStyle} ${styles.sectionBorderColor}`
-                  : "none",
+                marginBottom: "0",
               }}>
                 <h2
                   style={{
@@ -1265,24 +1269,6 @@ export default function ResumeBuilder() {
                     )}
                   </div>
                 ))}
-              </div>
-            )}
-
-            {/* Address */}
-            {styles.showAddress && resumeData.address && (
-              <div>
-                <h2
-                  style={{
-                    fontSize: `${styles.fontSize + 1}pt`,
-                    fontWeight: "bold",
-                    textTransform: "uppercase",
-                    paddingBottom: "2px",
-                    marginBottom: "6px",
-                  }}
-                >
-                  Address -
-                </h2>
-                <p style={{ color: "#374151" }}>{resumeData.address}</p>
               </div>
             )}
           </div>
