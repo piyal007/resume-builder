@@ -76,26 +76,55 @@ const defaultResumeData = {
     },
   ],
 
+  certifications: [
+    {
+      id: 1,
+      name: "React - The Complete Guide",
+      issuer: "Udemy",
+      date: "2024",
+      link: "",
+    },
+    {
+      id: 2,
+      name: "JavaScript Algorithms and Data Structures",
+      issuer: "freeCodeCamp",
+      date: "2023",
+      link: "",
+    },
+  ],
+
   address: "Dhaka, Bangladesh.",
+
+  languages: [
+    { id: 1, name: "Bangla", level: "Native" },
+    { id: 2, name: "English", level: "Fluent" },
+    { id: 3, name: "Hindi", level: "Conversational" },
+  ],
 };
 
 const defaultStyles = {
-  marginTop: 12,
-  marginRight: 12,
-  marginBottom: 12,
-  marginLeft: 12,
-  fontSize: 10,
-  lineHeight: 1.4,
+  marginTop: 5,
+  marginRight: 5,
+  marginBottom: 5,
+  marginLeft: 5,
+  fontSize: 14,
+  lineHeight: 1.2,
   accentColor: "#6b7280",
   linkColor: "#2563eb",
   // Header layout
-  headerLayout: "center", // "center" or "two-column"
-  headerContactFontSize: 9,
+  headerLayout: "two-column", // "center" or "two-column"
+  headerContactFontSize: 10,
   // Header border
   showHeaderTopBorder: false,
   showHeaderBottomBorder: true,
   headerBorderWidth: 1,
   headerBorderStyle: "solid",
+  // Section title styling
+  sectionTitleSize: 14,
+  sectionTitleBold: true,
+  sectionTitleUppercase: true,
+  sectionTitleColor: "#1f2937",
+  showSectionTitleDash: true,
   // Section border
   showSectionBorder: true,
   sectionBorderWidth: 1,
@@ -110,6 +139,8 @@ const defaultStyles = {
   showCareerObjective: true,
   showTechnicalSkills: true,
   showProjects: true,
+  showCertifications: true,
+  showLanguages: true,
   showAddress: true,
 };
 
@@ -207,9 +238,53 @@ export default function ResumeBuilder() {
     }));
   };
 
+  const updateCertification = (id, field, value) => {
+    setResumeData((prev) => ({
+      ...prev,
+      certifications: prev.certifications.map((c) => (c.id === id ? { ...c, [field]: value } : c)),
+    }));
+  };
+
+  const addCertification = () => {
+    const newId = Math.max(...resumeData.certifications.map((c) => c.id), 0) + 1;
+    setResumeData((prev) => ({
+      ...prev,
+      certifications: [...prev.certifications, { id: newId, name: "", issuer: "", date: "", link: "" }],
+    }));
+  };
+
+  const removeCertification = (id) => {
+    setResumeData((prev) => ({
+      ...prev,
+      certifications: prev.certifications.filter((c) => c.id !== id),
+    }));
+  };
+
+  const updateLanguage = (id, field, value) => {
+    setResumeData((prev) => ({
+      ...prev,
+      languages: prev.languages.map((l) => (l.id === id ? { ...l, [field]: value } : l)),
+    }));
+  };
+
+  const addLanguage = () => {
+    const newId = Math.max(...resumeData.languages.map((l) => l.id), 0) + 1;
+    setResumeData((prev) => ({
+      ...prev,
+      languages: [...prev.languages, { id: newId, name: "", level: "" }],
+    }));
+  };
+
+  const removeLanguage = (id) => {
+    setResumeData((prev) => ({
+      ...prev,
+      languages: prev.languages.filter((l) => l.id !== id),
+    }));
+  };
+
   const handlePrint = () => window.print();
 
-  const tabs = ["personal", "objective", "skills", "projects", "address", "styling"];
+  const tabs = ["personal", "objective", "skills", "projects", "certifications", "languages", "styling"];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -606,27 +681,113 @@ export default function ResumeBuilder() {
               </div>
             )}
 
-            {/* Address */}
-            {activeSection === "address" && (
+            {/* Certifications */}
+            {activeSection === "certifications" && (
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <h3 className="font-semibold text-gray-700">Address</h3>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={styles.showAddress}
-                      onChange={(e) => updateStyle("showAddress", e.target.checked)}
-                    />
-                    Show
-                  </label>
+                  <h3 className="font-semibold text-gray-700">Courses & Certifications</h3>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={styles.showCertifications}
+                        onChange={(e) => updateStyle("showCertifications", e.target.checked)}
+                      />
+                      Show
+                    </label>
+                    <button onClick={addCertification} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                      + Add
+                    </button>
+                  </div>
                 </div>
-                <input
-                  type="text"
-                  placeholder="City, Country"
-                  value={resumeData.address}
-                  onChange={(e) => updateField("address", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                />
+                {resumeData.certifications.map((cert, idx) => (
+                  <div key={cert.id} className="p-3 bg-gray-50 rounded-lg space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium text-gray-500">Certification {idx + 1}</span>
+                      <button onClick={() => removeCertification(cert.id)} className="text-red-500 text-xs hover:text-red-600">
+                        Remove
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Course/Certification Name"
+                      value={cert.name}
+                      onChange={(e) => updateCertification(cert.id, "name", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Issuer (e.g., Udemy, Coursera)"
+                        value={cert.issuer}
+                        onChange={(e) => updateCertification(cert.id, "issuer", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Year"
+                        value={cert.date}
+                        onChange={(e) => updateCertification(cert.id, "date", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Certificate Link (optional)"
+                      value={cert.link}
+                      onChange={(e) => updateCertification(cert.id, "link", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Languages */}
+            {activeSection === "languages" && (
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-semibold text-gray-700">Languages</h3>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={styles.showLanguages}
+                        onChange={(e) => updateStyle("showLanguages", e.target.checked)}
+                      />
+                      Show
+                    </label>
+                    <button onClick={addLanguage} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                      + Add
+                    </button>
+                  </div>
+                </div>
+                {resumeData.languages.map((lang, idx) => (
+                  <div key={lang.id} className="p-3 bg-gray-50 rounded-lg space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium text-gray-500">Language {idx + 1}</span>
+                      <button onClick={() => removeLanguage(lang.id)} className="text-red-500 text-xs hover:text-red-600">
+                        Remove
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Language (e.g., English)"
+                        value={lang.name}
+                        onChange={(e) => updateLanguage(lang.id, "name", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Level (e.g., Fluent, Native)"
+                        value={lang.level}
+                        onChange={(e) => updateLanguage(lang.id, "level", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -704,9 +865,9 @@ export default function ResumeBuilder() {
                       onChange={(e) => updateStyle("fontSize", Number(e.target.value))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                     >
-                      {[8, 9, 10, 11, 12].map((size) => (
+                      {[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24].map((size) => (
                         <option key={size} value={size}>
-                          {size}pt
+                          {size}px
                         </option>
                       ))}
                     </select>
@@ -768,9 +929,9 @@ export default function ResumeBuilder() {
                       onChange={(e) => updateStyle("headerContactFontSize", Number(e.target.value))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                     >
-                      {[7, 8, 9, 10, 11, 12].map((size) => (
+                      {[7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20].map((size) => (
                         <option key={size} value={size}>
-                          {size}pt
+                          {size}px
                         </option>
                       ))}
                     </select>
@@ -825,6 +986,60 @@ export default function ResumeBuilder() {
                       <option value="double">Double</option>
                     </select>
                   </div>
+                </div>
+
+                {/* Section Title Settings */}
+                <h3 className="font-semibold text-gray-700 pt-2">Section Titles</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Title Size</label>
+                    <select
+                      value={styles.sectionTitleSize}
+                      onChange={(e) => updateStyle("sectionTitleSize", Number(e.target.value))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    >
+                      {[9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24].map((size) => (
+                        <option key={size} value={size}>
+                          {size}px
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Title Color</label>
+                    <input
+                      type="color"
+                      value={styles.sectionTitleColor}
+                      onChange={(e) => updateStyle("sectionTitleColor", e.target.value)}
+                      className="w-full h-10 rounded border border-gray-300 cursor-pointer"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={styles.sectionTitleBold}
+                      onChange={(e) => updateStyle("sectionTitleBold", e.target.checked)}
+                    />
+                    Bold
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={styles.sectionTitleUppercase}
+                      onChange={(e) => updateStyle("sectionTitleUppercase", e.target.checked)}
+                    />
+                    Uppercase
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={styles.showSectionTitleDash}
+                      onChange={(e) => updateStyle("showSectionTitleDash", e.target.checked)}
+                    />
+                    Show Dash (-)
+                  </label>
                 </div>
 
                 {/* Section Border Settings */}
@@ -963,7 +1178,7 @@ export default function ResumeBuilder() {
               paddingRight: `${styles.marginRight}mm`,
               paddingBottom: `${styles.marginBottom}mm`,
               paddingLeft: `${styles.marginLeft}mm`,
-              fontSize: `${styles.fontSize}pt`,
+              fontSize: `${styles.fontSize}px`,
               fontFamily: "Arial, sans-serif",
               lineHeight: styles.lineHeight,
               color: "#1f2937",
@@ -992,7 +1207,7 @@ export default function ResumeBuilder() {
                 <div style={{ textAlign: "center" }}>
                   <h1
                     style={{
-                      fontSize: `${styles.fontSize + 8}pt`,
+                      fontSize: `${styles.fontSize + 8}px`,
                       fontWeight: "bold",
                       color: "#1f2937",
                       margin: 0,
@@ -1003,7 +1218,7 @@ export default function ResumeBuilder() {
                   </h1>
                   <p
                     style={{
-                      fontSize: `${styles.fontSize + 2}pt`,
+                      fontSize: `${styles.fontSize + 2}px`,
                       color: "#374151",
                       margin: "4px 0 8px 0",
                       fontWeight: "500",
@@ -1013,7 +1228,7 @@ export default function ResumeBuilder() {
                   </p>
                   <div
                     style={{
-                      fontSize: `${styles.headerContactFontSize}pt`,
+                      fontSize: `${styles.headerContactFontSize}px`,
                       color: "#374151",
                     }}
                   >
@@ -1050,7 +1265,7 @@ export default function ResumeBuilder() {
                   <div>
                     <h1
                       style={{
-                        fontSize: `${styles.fontSize + 8}pt`,
+                        fontSize: `${styles.fontSize + 8}px`,
                         fontWeight: "bold",
                         color: "#1f2937",
                         margin: 0,
@@ -1061,7 +1276,7 @@ export default function ResumeBuilder() {
                     </h1>
                     <p
                       style={{
-                        fontSize: `${styles.fontSize + 2}pt`,
+                        fontSize: `${styles.fontSize + 2}px`,
                         color: "#374151",
                         margin: "4px 0 0 0",
                         fontWeight: "500",
@@ -1072,7 +1287,7 @@ export default function ResumeBuilder() {
                   </div>
                   <div
                     style={{
-                      fontSize: `${styles.headerContactFontSize}pt`,
+                      fontSize: `${styles.headerContactFontSize}px`,
                       color: "#374151",
                       textAlign: "left",
                     }}
@@ -1124,14 +1339,15 @@ export default function ResumeBuilder() {
               }}>
                 <h2
                   style={{
-                    fontSize: `${styles.fontSize + 1}pt`,
-                    fontWeight: "bold",
-                    textTransform: "uppercase",
+                    fontSize: `${styles.sectionTitleSize}px`,
+                    fontWeight: styles.sectionTitleBold ? "bold" : "normal",
+                    textTransform: styles.sectionTitleUppercase ? "uppercase" : "none",
+                    color: styles.sectionTitleColor,
                     paddingBottom: "2px",
                     marginBottom: "6px",
                   }}
                 >
-                  Career Objective -
+                  Career Objective{styles.showSectionTitleDash ? " -" : ""}
                 </h2>
                 <p style={{ color: "#374151", textAlign: "justify" }}>{resumeData.careerObjective}</p>
               </div>
@@ -1148,14 +1364,15 @@ export default function ResumeBuilder() {
               }}>
                 <h2
                   style={{
-                    fontSize: `${styles.fontSize + 1}pt`,
-                    fontWeight: "bold",
-                    textTransform: "uppercase",
+                    fontSize: `${styles.sectionTitleSize}px`,
+                    fontWeight: styles.sectionTitleBold ? "bold" : "normal",
+                    textTransform: styles.sectionTitleUppercase ? "uppercase" : "none",
+                    color: styles.sectionTitleColor,
                     paddingBottom: "2px",
                     marginBottom: "6px",
                   }}
                 >
-                  Technical Skills -
+                  Technical Skills{styles.showSectionTitleDash ? " -" : ""}
                 </h2>
                 <div style={{ color: "#374151" }}>
                   {resumeData.technicalSkills.language && (
@@ -1208,23 +1425,29 @@ export default function ResumeBuilder() {
             {/* Projects */}
             {styles.showProjects && resumeData.projects.length > 0 && (
               <div style={{
-                marginBottom: "0",
+                marginBottom: "12px",
+                paddingBottom: styles.showSectionBorder && styles.showCertifications && resumeData.certifications.length > 0 ? "10px" : "0",
+                borderBottom: styles.showSectionBorder && styles.showCertifications && resumeData.certifications.length > 0
+                  ? `${styles.sectionBorderWidth}px ${styles.sectionBorderStyle} ${styles.sectionBorderColor}`
+                  : "none",
               }}>
                 <h2
                   style={{
-                    fontSize: `${styles.fontSize + 1}pt`,
-                    fontWeight: "bold",
-                    textTransform: "uppercase",
+                    fontSize: `${styles.sectionTitleSize}px`,
+                    fontWeight: styles.sectionTitleBold ? "bold" : "normal",
+                    textTransform: styles.sectionTitleUppercase ? "uppercase" : "none",
+                    color: styles.sectionTitleColor,
                     paddingBottom: "2px",
                     marginBottom: "6px",
                   }}
                 >
-                  Projects -
+                  Projects{styles.showSectionTitleDash ? " -" : ""}
                 </h2>
-                {resumeData.projects.map((proj) => (
+                {resumeData.projects.map((proj, idx) => (
                   <div key={proj.id} style={{ marginBottom: "10px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                       <div>
+                        <span style={{ fontWeight: "bold" }}>[{String(idx + 1).padStart(2, "0")}] </span>
                         <strong style={{ fontWeight: "bold" }}>{proj.name}</strong>
                         {proj.tagline && (
                           <span>
@@ -1236,7 +1459,7 @@ export default function ResumeBuilder() {
                           <span style={{ color: "#6b7280", fontStyle: "italic" }}> ( {proj.date} )</span>
                         )}
                       </div>
-                      <div style={{ fontSize: `${styles.fontSize - 1}pt` }}>
+                      <div style={{ fontSize: `${styles.fontSize - 1}px` }}>
                         {proj.liveUrl && (
                           <a href={proj.liveUrl} style={{ color: styles.linkColor, textDecoration: "underline" }}>
                             Live
@@ -1252,7 +1475,7 @@ export default function ResumeBuilder() {
                     </div>
                     {proj.description && <p style={{ color: "#374151", margin: "2px 0" }}>{proj.description}</p>}
                     {proj.bullets.length > 0 && proj.bullets.some((b) => b) && (
-                      <ul style={{ margin: "4px 0 4px 20px", paddingLeft: "0", color: "#374151" }}>
+                      <ul style={{ margin: "4px 0 4px 0", paddingLeft: "20px", color: "#374151", listStyleType: "disc" }}>
                         {proj.bullets
                           .filter((b) => b)
                           .map((bullet, bIdx) => (
@@ -1269,6 +1492,73 @@ export default function ResumeBuilder() {
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Courses & Certifications */}
+            {styles.showCertifications && resumeData.certifications.length > 0 && (
+              <div style={{
+                marginBottom: "12px",
+                paddingBottom: styles.showSectionBorder ? "10px" : "0",
+                borderBottom: styles.showSectionBorder
+                  ? `${styles.sectionBorderWidth}px ${styles.sectionBorderStyle} ${styles.sectionBorderColor}`
+                  : "none",
+              }}>
+                <h2
+                  style={{
+                    fontSize: `${styles.sectionTitleSize}px`,
+                    fontWeight: styles.sectionTitleBold ? "bold" : "normal",
+                    textTransform: styles.sectionTitleUppercase ? "uppercase" : "none",
+                    color: styles.sectionTitleColor,
+                    paddingBottom: "2px",
+                    marginBottom: "6px",
+                  }}
+                >
+                  Courses & Certifications{styles.showSectionTitleDash ? " -" : ""}
+                </h2>
+                {resumeData.certifications.map((cert) => (
+                  <div key={cert.id} style={{ marginBottom: "4px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                      <div>
+                        <strong>{cert.name}</strong>
+                        {cert.issuer && <span style={{ color: "#6b7280" }}> - {cert.issuer}</span>}
+                      </div>
+                      <span style={{ fontSize: `${styles.fontSize - 1}px`, color: "#6b7280" }}>{cert.date}</span>
+                    </div>
+                    {cert.link && (
+                      <a href={cert.link} style={{ color: styles.linkColor, textDecoration: "underline", fontSize: `${styles.fontSize - 1}px` }}>
+                        View Certificate
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Languages */}
+            {styles.showLanguages && resumeData.languages && resumeData.languages.length > 0 && (
+              <div style={{
+                marginBottom: "0",
+              }}>
+                <h2
+                  style={{
+                    fontSize: `${styles.sectionTitleSize}px`,
+                    fontWeight: styles.sectionTitleBold ? "bold" : "normal",
+                    textTransform: styles.sectionTitleUppercase ? "uppercase" : "none",
+                    color: styles.sectionTitleColor,
+                    paddingBottom: "2px",
+                    marginBottom: "6px",
+                  }}
+                >
+                  Languages{styles.showSectionTitleDash ? " -" : ""}
+                </h2>
+                <div style={{ color: "#374151" }}>
+                  {resumeData.languages.map((lang, idx) => (
+                    <span key={lang.id}>
+                      <strong>{lang.name}</strong> ({lang.level}){idx < resumeData.languages.length - 1 ? " | " : ""}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
           </div>
