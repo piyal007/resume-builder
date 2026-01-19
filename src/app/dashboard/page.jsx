@@ -111,6 +111,7 @@ const defaultStyles = {
   marginLeft: 5,
   fontSize: 14,
   lineHeight: 1.2,
+  fontFamily: "Arial",
   accentColor: "#6b7280",
   linkColor: "#2563eb",
   // Header layout
@@ -144,6 +145,14 @@ const defaultStyles = {
   showCertifications: true,
   showLanguages: true,
   showAddress: true,
+  // ATS Mode
+  atsMode: false,
+  // Certifications styling
+  certificationFontSize: 14,
+  certificationLineHeight: 1.3,
+  certificationBold: false,
+  certificationItalic: false,
+  certificationSpacing: 3,
 };
 
 const marginOptions = [
@@ -155,21 +164,42 @@ const marginOptions = [
   { label: "20mm", value: 20 },
 ];
 
+const fontOptions = [
+  { label: "Arial", value: "Arial" },
+  { label: "Verdana", value: "Verdana" },
+];
+
 export default function ResumeBuilder() {
   const [resumeData, setResumeData] = useState(defaultResumeData);
   const [styles, setStyles] = useState(defaultStyles);
   const [activeSection, setActiveSection] = useState("personal");
   const [currentResumeId, setCurrentResumeId] = useState(null);
   const [resumeTitle, setResumeTitle] = useState("My Resume");
+  const [originalResumeTitle, setOriginalResumeTitle] = useState("My Resume");
   const [savedResumes, setSavedResumes] = useState([]);
   const [saveStatus, setSaveStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isOverflowing, setIsOverflowing] = useState(false);
   const resumeRef = useRef(null);
 
   // Fetch saved resumes on mount
   useEffect(() => {
     fetchResumes();
   }, []);
+
+  // Check for overflow
+  useEffect(() => {
+    if (resumeRef.current) {
+      const checkOverflow = () => {
+        const element = resumeRef.current;
+        setIsOverflowing(element.scrollHeight > element.clientHeight);
+      };
+      checkOverflow();
+      const observer = new ResizeObserver(checkOverflow);
+      observer.observe(resumeRef.current);
+      return () => observer.disconnect();
+    }
+  }, [resumeData, styles]);
 
   const fetchResumes = async () => {
     try {
@@ -186,9 +216,12 @@ export default function ResumeBuilder() {
     setSaveStatus("Saving...");
     try {
       const payload = { resumeData, styles, title: resumeTitle };
+      
+      // Check if title has changed - if yes, create new resume (Save As)
+      const titleChanged = currentResumeId && resumeTitle !== originalResumeTitle;
 
-      if (currentResumeId) {
-        // Update existing resume
+      if (currentResumeId && !titleChanged) {
+        // Update existing resume (same title)
         const response = await fetch(`${API_URL}/resumes/${currentResumeId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -197,7 +230,7 @@ export default function ResumeBuilder() {
         await response.json();
         setSaveStatus("Updated!");
       } else {
-        // Create new resume
+        // Create new resume (no ID or title changed)
         const response = await fetch(`${API_URL}/resumes`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -205,7 +238,8 @@ export default function ResumeBuilder() {
         });
         const data = await response.json();
         setCurrentResumeId(data._id);
-        setSaveStatus("Saved!");
+        setOriginalResumeTitle(resumeTitle);
+        setSaveStatus(titleChanged ? "Saved as new resume!" : "Saved!");
       }
       fetchResumes();
     } catch (error) {
@@ -225,6 +259,7 @@ export default function ResumeBuilder() {
       setResumeData(data.resumeData);
       setStyles(data.styles);
       setResumeTitle(data.title || "My Resume");
+      setOriginalResumeTitle(data.title || "My Resume");
       setCurrentResumeId(id);
     } catch (error) {
       console.error("Failed to load resume:", error);
@@ -253,6 +288,7 @@ export default function ResumeBuilder() {
     setResumeData(defaultResumeData);
     setStyles(defaultStyles);
     setResumeTitle("My Resume");
+    setOriginalResumeTitle("My Resume");
   };
 
   const updateField = (field, value) => {
@@ -408,7 +444,7 @@ export default function ResumeBuilder() {
 
       <div className="flex h-screen">
         {/* Editor Panel */}
-        <div className="w-1/2 overflow-y-auto bg-white border-r border-gray-200 p-6 print:hidden">
+        <div className="w-1/3 overflow-y-auto bg-white border-r border-gray-200 p-6 print:hidden">
           <div className="max-w-lg mx-auto">
             <h1 className="text-2xl font-bold text-gray-800 mb-4">Resume Builder</h1>
 
@@ -420,7 +456,13 @@ export default function ResumeBuilder() {
                   disabled={isLoading}
                   className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition font-medium text-sm disabled:opacity-50"
                 >
-                  {isLoading ? "Saving..." : currentResumeId ? "Update Resume" : "Save Resume"}
+                  {isLoading 
+                    ? "Saving..." 
+                    : currentResumeId && resumeTitle !== originalResumeTitle
+                    ? "Save As New Resume"
+                    : currentResumeId 
+                    ? "Update Resume" 
+                    : "Save Resume"}
                 </button>
                 <button
                   onClick={createNewResume}
@@ -860,7 +902,7 @@ export default function ResumeBuilder() {
                     </div>
                     <input
                       type="text"
-                      placeholder="Course/Certification Name"
+                      placeholder="Course/Certification Name (e.g., Complete Web Development Course Level - 1)"
                       value={cert.name}
                       onChange={(e) => updateCertification(cert.id, "name", e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -868,14 +910,14 @@ export default function ResumeBuilder() {
                     <div className="grid grid-cols-2 gap-2">
                       <input
                         type="text"
-                        placeholder="Issuer (e.g., Udemy, Coursera)"
+                        placeholder="Issuer (e.g., Programming Hero)"
                         value={cert.issuer}
                         onChange={(e) => updateCertification(cert.id, "issuer", e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                       />
                       <input
                         type="text"
-                        placeholder="Year"
+                        placeholder="Date (e.g., 01 August 2025)"
                         value={cert.date}
                         onChange={(e) => updateCertification(cert.id, "date", e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -944,6 +986,20 @@ export default function ResumeBuilder() {
             {/* Styling */}
             {activeSection === "styling" && (
               <div className="space-y-4">
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={styles.atsMode}
+                      onChange={(e) => updateStyle("atsMode", e.target.checked)}
+                    />
+                    <div>
+                      <span className="font-semibold text-blue-900">ATS-Friendly Mode</span>
+                      <p className="text-xs text-blue-700">Removes decorative styling for better ATS compatibility</p>
+                    </div>
+                  </label>
+                </div>
+
                 <h3 className="font-semibold text-gray-700">Page Margins</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1007,26 +1063,41 @@ export default function ResumeBuilder() {
                 </div>
 
                 <h3 className="font-semibold text-gray-700 pt-2">Typography</h3>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-3">
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Font Size</label>
+                    <label className="block text-sm text-gray-600 mb-1">Font Family</label>
                     <select
-                      value={styles.fontSize}
-                      onChange={(e) => updateStyle("fontSize", Number(e.target.value))}
+                      value={styles.fontFamily}
+                      onChange={(e) => updateStyle("fontFamily", e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                     >
-                      {[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24].map((size) => (
-                        <option key={size} value={size}>
-                          {size}px
+                      {fontOptions.map((font) => (
+                        <option key={font.value} value={font.value}>
+                          {font.label}
                         </option>
                       ))}
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Line Height</label>
-                    <select
-                      value={styles.lineHeight}
-                      onChange={(e) => updateStyle("lineHeight", Number(e.target.value))}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Font Size</label>
+                      <select
+                        value={styles.fontSize}
+                        onChange={(e) => updateStyle("fontSize", Number(e.target.value))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      >
+                        {[8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24].map((size) => (
+                          <option key={size} value={size}>
+                            {size}px
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Line Height</label>
+                      <select
+                        value={styles.lineHeight}
+                        onChange={(e) => updateStyle("lineHeight", Number(e.target.value))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                     >
                       {[1.2, 1.3, 1.4, 1.5, 1.6].map((lh) => (
@@ -1035,6 +1106,7 @@ export default function ResumeBuilder() {
                         </option>
                       ))}
                     </select>
+                  </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -1310,58 +1382,135 @@ export default function ResumeBuilder() {
                     </div>
                   </>
                 )}
+
+                {/* Certifications Styling */}
+                <h3 className="font-semibold text-gray-700 pt-2">Certifications Styling</h3>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Font Size</label>
+                      <select
+                        value={styles.certificationFontSize}
+                        onChange={(e) => updateStyle("certificationFontSize", Number(e.target.value))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      >
+                        {[10, 11, 12, 13, 14, 15, 16, 18].map((size) => (
+                          <option key={size} value={size}>
+                            {size}px
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Line Height</label>
+                      <select
+                        value={styles.certificationLineHeight}
+                        onChange={(e) => updateStyle("certificationLineHeight", Number(e.target.value))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      >
+                        {[1.0, 1.1, 1.2, 1.3, 1.4, 1.5].map((lh) => (
+                          <option key={lh} value={lh}>
+                            {lh}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Item Spacing</label>
+                      <select
+                        value={styles.certificationSpacing}
+                        onChange={(e) => updateStyle("certificationSpacing", Number(e.target.value))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      >
+                        {[1, 2, 3, 4, 5, 6, 8, 10].map((spacing) => (
+                          <option key={spacing} value={spacing}>
+                            {spacing}px
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={styles.certificationBold}
+                          onChange={(e) => updateStyle("certificationBold", e.target.checked)}
+                        />
+                        Bold
+                      </label>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={styles.certificationItalic}
+                          onChange={(e) => updateStyle("certificationItalic", e.target.checked)}
+                        />
+                        Italic
+                      </label>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
         </div>
 
         {/* Preview Panel */}
-        <div className="w-1/2 overflow-y-auto bg-gray-200 p-8 flex justify-center print:p-0 print:bg-white">
+        <div className="w-2/3 overflow-y-auto bg-gray-200 p-8 flex flex-col items-center print:p-0 print:bg-white">
+          {isOverflowing && (
+            <div className="w-full max-w-[210mm] mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded-lg print:hidden">
+              <p className="text-sm text-yellow-800 font-medium">⚠️ Content exceeds one page</p>
+              <p className="text-xs text-yellow-700">Reduce content or decrease font size for better ATS compatibility</p>
+            </div>
+          )}
           <div
             id="resume-preview"
             ref={resumeRef}
             className="bg-white shadow-xl"
             style={{
               width: "210mm",
+              maxHeight: "297mm",
               minHeight: "297mm",
               paddingTop: `${styles.marginTop}mm`,
               paddingRight: `${styles.marginRight}mm`,
               paddingBottom: `${styles.marginBottom}mm`,
               paddingLeft: `${styles.marginLeft}mm`,
               fontSize: `${styles.fontSize}px`,
-              fontFamily: "Arial, sans-serif",
+              fontFamily: `${styles.fontFamily}, sans-serif`,
               lineHeight: styles.lineHeight,
               color: "#1f2937",
               boxSizing: "border-box",
-              border: styles.showPageBorder
+              border: styles.showPageBorder && !styles.atsMode
                 ? `${styles.pageBorderWidth}px ${styles.pageBorderStyle} ${styles.pageBorderColor}`
                 : "none",
-              borderRadius: `${styles.pageBorderRadius}px`,
+              borderRadius: styles.atsMode ? "0" : `${styles.pageBorderRadius}px`,
+              overflow: "hidden",
             }}
           >
             {/* Header */}
-            <div
+            <header
               style={{
-                borderTop: styles.showHeaderTopBorder
+                borderTop: styles.showHeaderTopBorder && !styles.atsMode
                   ? `${styles.headerBorderWidth}px ${styles.headerBorderStyle} ${styles.accentColor}`
                   : "none",
-                borderBottom: styles.showHeaderBottomBorder
+                borderBottom: styles.showHeaderBottomBorder && !styles.atsMode
                   ? `${styles.headerBorderWidth}px ${styles.headerBorderStyle} ${styles.accentColor}`
                   : "none",
                 paddingBottom: "8px",
                 marginBottom: "10px",
               }}
             >
-              {styles.headerLayout === "center" ? (
-                // Centered layout
-                <div style={{ textAlign: "center" }}>
+              {styles.headerLayout === "center" || styles.atsMode ? (
+                // Centered layout (ATS-friendly)
+                <div style={{ textAlign: styles.atsMode ? "left" : "center" }}>
                   <h1
                     style={{
                       fontSize: `${styles.fontSize + 8}px`,
                       fontWeight: "bold",
                       color: "#1f2937",
                       margin: 0,
-                      letterSpacing: "0.05em",
+                      letterSpacing: styles.atsMode ? "normal" : "0.05em",
                     }}
                   >
                     {resumeData.name || "YOUR NAME"}
@@ -1405,6 +1554,12 @@ export default function ResumeBuilder() {
                         <a href={resumeData.portfolioUrl} style={{ color: styles.linkColor, textDecoration: "underline" }}>
                           {resumeData.portfolio}
                         </a>
+                      </>
+                    )}
+                    {resumeData.address && (
+                      <>
+                        {" | "}
+                        <span>Address: {resumeData.address}</span>
                       </>
                     )}
                   </div>
@@ -1476,14 +1631,14 @@ export default function ResumeBuilder() {
                   </div>
                 </div>
               )}
-            </div>
+            </header>
 
             {/* Career Objective */}
             {styles.showCareerObjective && resumeData.careerObjective && (
-              <div style={{
+              <section style={{
                 marginBottom: "12px",
-                paddingBottom: styles.showSectionBorder ? "10px" : "0",
-                borderBottom: styles.showSectionBorder
+                paddingBottom: styles.showSectionBorder && !styles.atsMode ? "10px" : "0",
+                borderBottom: styles.showSectionBorder && !styles.atsMode
                   ? `${styles.sectionBorderWidth}px ${styles.sectionBorderStyle} ${styles.sectionBorderColor}`
                   : "none",
               }}>
@@ -1491,24 +1646,24 @@ export default function ResumeBuilder() {
                   style={{
                     fontSize: `${styles.sectionTitleSize}px`,
                     fontWeight: styles.sectionTitleBold ? "bold" : "normal",
-                    textTransform: styles.sectionTitleUppercase ? "uppercase" : "none",
+                    textTransform: styles.sectionTitleUppercase && !styles.atsMode ? "uppercase" : "none",
                     color: styles.sectionTitleColor,
                     paddingBottom: "2px",
                     marginBottom: "6px",
                   }}
                 >
-                  Career Objective{styles.showSectionTitleDash ? " -" : ""}
+                  Career Objective{styles.showSectionTitleDash && !styles.atsMode ? " -" : ""}
                 </h2>
                 <p style={{ color: "#374151", textAlign: "justify" }}>{resumeData.careerObjective}</p>
-              </div>
+              </section>
             )}
 
             {/* Technical Skills */}
             {styles.showTechnicalSkills && (
-              <div style={{
+              <section style={{
                 marginBottom: "12px",
-                paddingBottom: styles.showSectionBorder ? "10px" : "0",
-                borderBottom: styles.showSectionBorder
+                paddingBottom: styles.showSectionBorder && !styles.atsMode ? "10px" : "0",
+                borderBottom: styles.showSectionBorder && !styles.atsMode
                   ? `${styles.sectionBorderWidth}px ${styles.sectionBorderStyle} ${styles.sectionBorderColor}`
                   : "none",
               }}>
@@ -1516,13 +1671,13 @@ export default function ResumeBuilder() {
                   style={{
                     fontSize: `${styles.sectionTitleSize}px`,
                     fontWeight: styles.sectionTitleBold ? "bold" : "normal",
-                    textTransform: styles.sectionTitleUppercase ? "uppercase" : "none",
+                    textTransform: styles.sectionTitleUppercase && !styles.atsMode ? "uppercase" : "none",
                     color: styles.sectionTitleColor,
                     paddingBottom: "2px",
                     marginBottom: "6px",
                   }}
                 >
-                  Technical Skills{styles.showSectionTitleDash ? " -" : ""}
+                  Technical Skills{styles.showSectionTitleDash && !styles.atsMode ? " -" : ""}
                 </h2>
                 <div style={{ color: "#374151" }}>
                   {resumeData.technicalSkills.language && (
@@ -1569,15 +1724,15 @@ export default function ResumeBuilder() {
                     </p>
                   )}
                 </div>
-              </div>
+              </section>
             )}
 
             {/* Projects */}
             {styles.showProjects && resumeData.projects.length > 0 && (
-              <div style={{
+              <section style={{
                 marginBottom: "12px",
-                paddingBottom: styles.showSectionBorder && styles.showCertifications && resumeData.certifications.length > 0 ? "10px" : "0",
-                borderBottom: styles.showSectionBorder && styles.showCertifications && resumeData.certifications.length > 0
+                paddingBottom: styles.showSectionBorder && !styles.atsMode && styles.showCertifications && resumeData.certifications.length > 0 ? "10px" : "0",
+                borderBottom: styles.showSectionBorder && !styles.atsMode && styles.showCertifications && resumeData.certifications.length > 0
                   ? `${styles.sectionBorderWidth}px ${styles.sectionBorderStyle} ${styles.sectionBorderColor}`
                   : "none",
               }}>
@@ -1585,13 +1740,13 @@ export default function ResumeBuilder() {
                   style={{
                     fontSize: `${styles.sectionTitleSize}px`,
                     fontWeight: styles.sectionTitleBold ? "bold" : "normal",
-                    textTransform: styles.sectionTitleUppercase ? "uppercase" : "none",
+                    textTransform: styles.sectionTitleUppercase && !styles.atsMode ? "uppercase" : "none",
                     color: styles.sectionTitleColor,
                     paddingBottom: "2px",
                     marginBottom: "6px",
                   }}
                 >
-                  Projects{styles.showSectionTitleDash ? " -" : ""}
+                  Projects{styles.showSectionTitleDash && !styles.atsMode ? " -" : ""}
                 </h2>
                 {resumeData.projects.map((proj, idx) => (
                   <div key={proj.id} style={{ marginBottom: "10px" }}>
@@ -1642,15 +1797,15 @@ export default function ResumeBuilder() {
                     )}
                   </div>
                 ))}
-              </div>
+              </section>
             )}
 
             {/* Courses & Certifications */}
             {styles.showCertifications && resumeData.certifications.length > 0 && (
-              <div style={{
+              <section style={{
                 marginBottom: "12px",
-                paddingBottom: styles.showSectionBorder ? "10px" : "0",
-                borderBottom: styles.showSectionBorder
+                paddingBottom: styles.showSectionBorder && !styles.atsMode ? "10px" : "0",
+                borderBottom: styles.showSectionBorder && !styles.atsMode
                   ? `${styles.sectionBorderWidth}px ${styles.sectionBorderStyle} ${styles.sectionBorderColor}`
                   : "none",
               }}>
@@ -1658,49 +1813,62 @@ export default function ResumeBuilder() {
                   style={{
                     fontSize: `${styles.sectionTitleSize}px`,
                     fontWeight: styles.sectionTitleBold ? "bold" : "normal",
-                    textTransform: styles.sectionTitleUppercase ? "uppercase" : "none",
+                    textTransform: styles.sectionTitleUppercase && !styles.atsMode ? "uppercase" : "none",
                     color: styles.sectionTitleColor,
                     paddingBottom: "2px",
                     marginBottom: "6px",
                   }}
                 >
-                  Courses & Certifications{styles.showSectionTitleDash ? " -" : ""}
+                  Courses & Certifications{styles.showSectionTitleDash && !styles.atsMode ? " -" : ""}
                 </h2>
                 {resumeData.certifications.map((cert) => (
-                  <div key={cert.id} style={{ marginBottom: "4px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                      <div>
-                        <strong>{cert.name}</strong>
+                  <div key={cert.id} style={{ marginBottom: `${styles.certificationSpacing}px` }}>
+                    <div style={{ 
+                      display: "flex", 
+                      justifyContent: "space-between", 
+                      alignItems: "baseline", 
+                      flexWrap: "wrap", 
+                      gap: "8px",
+                      fontSize: `${styles.certificationFontSize}px`,
+                      lineHeight: styles.certificationLineHeight,
+                      fontWeight: styles.certificationBold ? "bold" : "normal",
+                      fontStyle: styles.certificationItalic ? "italic" : "normal",
+                    }}>
+                      <div style={{ flex: "1", minWidth: "0" }}>
+                        <span>{cert.name}</span>
                         {cert.issuer && <span style={{ color: "#6b7280" }}> - {cert.issuer}</span>}
+                        {cert.link && (
+                          <>
+                            {" "}
+                            <a href={cert.link} style={{ color: styles.linkColor, textDecoration: "underline" }}>
+                              Certificate
+                            </a>
+                          </>
+                        )}
                       </div>
-                      <span style={{ fontSize: `${styles.fontSize - 1}px`, color: "#6b7280" }}>{cert.date}</span>
+                      <span style={{ color: "#6b7280", whiteSpace: "nowrap" }}>{cert.date}</span>
                     </div>
-                    {cert.link && (
-                      <a href={cert.link} style={{ color: styles.linkColor, textDecoration: "underline", fontSize: `${styles.fontSize - 1}px` }}>
-                        View Certificate
-                      </a>
-                    )}
                   </div>
                 ))}
-              </div>
+              </section>
             )}
 
             {/* Languages */}
             {styles.showLanguages && resumeData.languages && resumeData.languages.length > 0 && (
-              <div style={{
+              <section style={{
                 marginBottom: "0",
               }}>
                 <h2
                   style={{
                     fontSize: `${styles.sectionTitleSize}px`,
                     fontWeight: styles.sectionTitleBold ? "bold" : "normal",
-                    textTransform: styles.sectionTitleUppercase ? "uppercase" : "none",
+                    textTransform: styles.sectionTitleUppercase && !styles.atsMode ? "uppercase" : "none",
                     color: styles.sectionTitleColor,
                     paddingBottom: "2px",
                     marginBottom: "6px",
                   }}
                 >
-                  Languages{styles.showSectionTitleDash ? " -" : ""}
+                  Languages{styles.showSectionTitleDash && !styles.atsMode ? " -" : ""}
                 </h2>
                 <div style={{ color: "#374151" }}>
                   {resumeData.languages.map((lang, idx) => (
@@ -1709,7 +1877,7 @@ export default function ResumeBuilder() {
                     </span>
                   ))}
                 </div>
-              </div>
+              </section>
             )}
           </div>
         </div>
